@@ -40,7 +40,7 @@
     <div class="px-6 text-gray-400 hidden md:block text-xs font-mono relative z-10" id="live-clock">--:--:--</div>
   </div>
 
-  <!-- Navigation - VISIBLE AND FUNCTIONAL -->
+  <!-- Navigation -->
   <nav class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
@@ -56,7 +56,6 @@
           </div>
         </div>
         
-        <!-- Desktop Navigation Menu -->
         <div class="hidden lg:flex items-center gap-1">
           <button onclick="showTab('v-overview')" class="nav-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-emerald-700 bg-emerald-50 border border-emerald-200" data-tab="v-overview"> Overview</button>
           <button onclick="showTab('v-procurement')" class="nav-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-gray-600 hover:text-gray-900 hover:bg-gray-100" data-tab="v-procurement">📋 Procurement</button>
@@ -67,7 +66,6 @@
           <button onclick="showTab('v-about')" class="nav-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-gray-600 hover:text-gray-900 hover:bg-gray-100" data-tab="v-about">ℹ About</button>
         </div>
         
-        <!-- Mobile menu button -->
         <button onclick="toggleMobileMenu()" class="lg:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -76,13 +74,12 @@
       </div>
     </div>
     
-    <!-- Mobile Navigation Menu -->
     <div id="mobile-menu" class="hidden lg:hidden bg-white border-t border-gray-200">
       <div class="px-4 py-3 space-y-2">
         <button onclick="showTab('v-overview'); toggleMobileMenu()" class="w-full px-4 py-3 rounded-lg text-left text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200"> Overview</button>
         <button onclick="showTab('v-procurement'); toggleMobileMenu()" class="w-full px-4 py-3 rounded-lg text-left text-sm font-semibold text-gray-600 hover:bg-gray-100">📋 Procurement</button>
         <button onclick="showTab('v-ghost'); toggleMobileMenu()" class="w-full px-4 py-3 rounded-lg text-left text-sm font-semibold text-gray-600 hover:bg-gray-100">👻 Ghost Projects</button>
-        <button onclick="showTab('v-report'); toggleMobileMenu()" class="w-full px-4 py-3 rounded-lg text-left text-sm font-semibold text-gray-600 hover:bg-gray-100">🚨 Report</button>
+        <button onclick="showTab('v-report'); toggleMobileMenu()" class="w-full px-4 py-3 rounded-lg text-left text-sm font-semibold text-gray-600 hover:bg-gray-100"> Report</button>
         <button onclick="showTab('v-ai'); toggleMobileMenu()" class="w-full px-4 py-3 rounded-lg text-left text-sm font-semibold text-gray-600 hover:bg-gray-100">🤖 AI Investigator</button>
         <button onclick="showTab('v-sync'); toggleMobileMenu()" class="w-full px-4 py-3 rounded-lg text-left text-sm font-semibold text-gray-600 hover:bg-gray-100"> Sync Data</button>
         <button onclick="showTab('v-about'); toggleMobileMenu()" class="w-full px-4 py-3 rounded-lg text-left text-sm font-semibold text-gray-600 hover:bg-gray-100">ℹ About</button>
@@ -90,20 +87,18 @@
     </div>
   </nav>
 
-  <!-- Main Content -->
   <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8">
 
-    <!-- ================= OVERVIEW TAB ================= -->
     <div id="v-overview" class="tab-content active space-y-8">
       <div class="relative rounded-2xl overflow-hidden border border-gray-200 shadow-lg bg-white">
         <img src="https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=1920&q=95&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover opacity-20" alt="Nairobi Skyline">
         <div class="absolute inset-0 bg-gradient-to-r from-white via-white/90 to-transparent"></div>
         <div class="relative z-10 p-8 md:p-12">
-          <p class="text-emerald-700 font-semibold mb-3 tracking-wider text-sm uppercase">🇰 Kenya · Real-Time Corruption Intelligence · All 47 Counties</p>
+          <p class="text-emerald-700 font-semibold mb-3 tracking-wider text-sm uppercase">🇰🇪 Kenya · Real-Time Corruption Intelligence · All 47 Counties</p>
           <h2 class="text-4xl md:text-5xl font-black mb-4 tracking-tight text-gray-900">Exposing Corruption.<br><span class="text-emerald-600">Protecting Kenya.</span></h2>
           <p class="text-gray-600 max-w-2xl mb-8 text-lg leading-relaxed">Live AI analysis of government procurement contracts from Kenya's official PPRA portal. Satellite ghost project detection. Anonymous citizen reporting. <span class="text-gray-900 font-bold">105,738+ real contracts</span> — auto-synced daily.</p>
           <div class="flex flex-col sm:flex-row gap-4">
-            <button onclick="showTab('v-procurement')" class="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2"> Scan Contracts</button>
+            <button onclick="showTab('v-procurement')" class="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2">🔍 Scan Contracts</button>
             <button onclick="showTab('v-report')" class="px-8 py-3 bg-white hover:bg-gray-50 text-gray-900 font-bold rounded-xl border border-gray-300 transition-all shadow-sm flex items-center justify-center gap-2">🚨 Report Corruption</button>
           </div>
         </div>
@@ -129,7 +124,6 @@
       </div>
     </div>
 
-    <!-- ================= PROCUREMENT TAB ================= -->
     <div id="v-procurement" class="tab-content space-y-6">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
         <div class="flex flex-wrap gap-3 w-full md:w-auto">
@@ -171,7 +165,6 @@
       </div>
     </div>
 
-    <!-- ================= GHOST PROJECTS TAB ================= -->
     <div id="v-ghost" class="tab-content space-y-6">
       <div class="text-center max-w-3xl mx-auto mb-8">
         <h2 class="text-3xl font-bold mb-3 text-gray-900">🛰 Ghost Project Detector</h2>
@@ -182,7 +175,6 @@
       </div>
     </div>
 
-    <!-- ================= REPORT TAB ================= -->
     <div id="v-report" class="tab-content max-w-3xl mx-auto space-y-6">
       <div class="bg-white p-8 rounded-xl border border-gray-200 shadow-sm">
         <div class="flex items-center gap-3 mb-6">
@@ -222,7 +214,6 @@
       </div>
     </div>
 
-    <!-- ================= AI INVESTIGATOR TAB ================= -->
     <div id="v-ai" class="tab-content space-y-6 max-w-4xl mx-auto">
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[600px]">
         <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
@@ -250,7 +241,6 @@
       </div>
     </div>
 
-    <!-- ================= SYNC DATA TAB ================= -->
     <div id="v-sync" class="tab-content space-y-6 max-w-4xl mx-auto">
       <div class="bg-white p-8 rounded-xl border border-gray-200 shadow-sm">
         <h2 class="text-2xl font-bold mb-2 text-gray-900"> PPRA Public Procurement Portal (PPIP)</h2>
@@ -262,14 +252,13 @@
               <option>2025</option><option>2024</option><option>2023</option>
             </select>
           </div>
-          <button onclick="startSync()" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors text-sm shadow-sm"> Start OCDS Sync</button>
+          <button onclick="startSync()" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors text-sm shadow-sm">🔄 Start OCDS Sync</button>
           <button onclick="loadSyncStatus()" class="px-6 py-2.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-900 font-bold rounded-lg transition-colors text-sm shadow-sm">📊 Refresh Status</button>
         </div>
         <div id="sync-status" class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-600 min-h-[80px]">Click Refresh Status to load.</div>
       </div>
     </div>
 
-    <!-- ================= ABOUT TAB ================= -->
     <div id="v-about" class="tab-content max-w-3xl mx-auto space-y-8">
       <div class="text-center">
         <h2 class="text-3xl font-bold mb-2 text-gray-900">About KenyaWatch AI</h2>
@@ -282,7 +271,7 @@
         <p class="text-gray-700 leading-relaxed">Real PPIP procurement data combined with <strong class="text-gray-900">Gemini AI fraud detection</strong>, <strong class="text-gray-900">satellite ghost project verification</strong>, and <strong class="text-gray-900">anonymous citizen reporting</strong> — empowering EACC, journalists and all Kenyans simultaneously.</p>
       </div>
       <div class="bg-white p-8 rounded-xl border border-gray-200 shadow-sm text-center">
-        <h3 class="text-xl font-bold mb-4 text-gray-900">‍💻 Built By</h3>
+        <h3 class="text-xl font-bold mb-4 text-gray-900">🧑‍💻 Built By</h3>
         <p class="text-lg font-semibold text-gray-900">Douglas Mwebi (Daggy)</p>
         <p class="text-gray-500">Daggy Techs · Kisii, Kenya</p>
         <p class="text-gray-600 mt-2">daggytechs@gmail.com | +254 796 820 013</p>
@@ -291,14 +280,12 @@
 
   </main>
 
-  <!-- Footer -->
   <footer class="border-t border-gray-200 bg-white py-6 mt-auto">
     <div class="max-w-7xl mx-auto px-4 text-center text-sm text-gray-500">
       <p>© 2026 KenyaWatch AI. Built by Daggy Techs. All rights reserved.</p>
     </div>
   </footer>
 
-  <!-- Scan Contract Modal -->
   <div id="scan-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-xl border border-gray-200 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       <div class="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
@@ -320,15 +307,13 @@
           <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Bid Type</label><select id="scan-bid" class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none"><option>open</option><option>single_source</option><option>restricted</option><option>emergency</option></select></div>
           <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Award Date</label><input type="date" id="scan-date" class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500"></div>
         </div>
-        <button onclick="runScan()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-colors mt-4 shadow-sm"> Run AI Fraud Scan</button>
+        <button onclick="runScan()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-colors mt-4 shadow-sm">🤖 Run AI Fraud Scan</button>
         <div id="scan-result" class="hidden mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm"></div>
       </div>
     </div>
   </div>
 
-  <!-- ================= JAVASCRIPT ================= -->
   <script>
-    // ️ CRITICAL: Set this to your Render backend URL
     const API_BASE = "https://kenyawatch-ai-backend.onrender.com"; 
 
     function formatMoney(amount) {
@@ -467,8 +452,8 @@
       try {
         const res = await fetch(API_BASE + '/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const data = await res.json();
-        if (data.success) { alert('✅ Report submitted securely.\n\nCase Number: ' + data.data.case_number); form.reset(); } else { alert('❌ Error: ' + data.error); }
-      } catch (err) { alert(' Network error. Please check your connection.'); }
+        if (data.success) { alert('✅ Report submitted securely.\n\nCase Number: ' + data.data.case_number); form.reset(); } else { alert(' Error: ' + data.error); }
+      } catch (err) { alert('❌ Network error. Please check your connection.'); }
       btn.innerHTML = originalText;
       btn.disabled = false;
     }
@@ -526,15 +511,31 @@
     async function startSync() {
       const year = document.getElementById('sync-year').value;
       const statusDiv = document.getElementById('sync-status');
-      statusDiv.innerHTML = '<span class="text-blue-600 animate-pulse">⏳ Syncing in background... Check Render logs for progress. This may take 3-10 minutes.</span>';
+      statusDiv.innerHTML = '<span class="text-blue-600 animate-pulse"> Syncing in background... Check Render logs for progress. This may take 3-10 minutes.</span>';
       try {
         const res = await fetch(API_BASE + '/api/sync/ocds', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ year: parseInt(year, 10) }) });
+        
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          const text = await res.text();
+          console.error('Backend returned non-JSON:', text);
+          statusDiv.innerHTML = `<span class="text-red-600">❌ Sync failed: Backend returned an invalid response (Status ${res.status}). Check Render logs.</span>`;
+          return;
+        }
+
         const data = await res.json();
+        console.log('Sync response:', data);
+
         if (data.success) {
           statusDiv.innerHTML = `<div class="text-emerald-700 font-bold mb-2">✅ ${data.message}</div><div class="text-xs text-gray-500">Log ID: ${data.logId} · Refresh status in a few minutes.</div>`;
           setTimeout(loadSyncStatus, 5000);
-        } else { statusDiv.innerHTML = `<span class="text-red-600">❌ Sync failed: ${data.error || 'Unknown error'}</span>`; }
-      } catch (e) { statusDiv.innerHTML = '<span class="text-red-600"> Sync failed: Network error. Check API connection.</span>'; console.error(e); }
+        } else {
+          statusDiv.innerHTML = `<span class="text-red-600">❌ Sync failed: ${data.error || 'Unknown error. Check Render backend logs for details.'}</span>`;
+        }
+      } catch (e) {
+        console.error('Fetch error:', e);
+        statusDiv.innerHTML = `<span class="text-red-600">❌ Sync failed: Network error. Ensure backend is running at ${API_BASE}</span>`;
+      }
     }
 
     async function loadSyncStatus() {
@@ -552,7 +553,6 @@
       } catch (e) { statusDiv.innerHTML = '<span class="text-red-600">Failed to load status.</span>'; }
     }
 
-    // Initial Load
     loadDash();
   </script>
 </body>
