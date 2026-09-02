@@ -67,4 +67,6 @@ router.get('/status', async (_req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-module.exports = { router, fetchAndIngest };
+// CRITICAL FIX: Attach fetchAndIngest to the router and export the router directly
+router.fetchAndIngest = fetchAndIngest;
+module.exports = router;
