@@ -1,4 +1,7 @@
 const router = require('express').Router();
+const https = require('https');
+const http = require('http');
+const zlib = require('zlib');
 const { pool } = require('../db/index');
 
 const COUNTY_MAP = {
@@ -169,30 +172,49 @@ async function insertBatch(records) {
            r.risk_level, r.flags, r.procuring_entity, r.ocds_ocid]
         );
         if (result.rows[0]?.is_new) count++;
-      } catch (_) {}
+      } catch (err) {
+        console.error('Insert error for', r.contract_id, err.message);
+      }
     }
-  } finally { client.release(); }
+  } finally { 
+    client.release(); 
+  }
   return count;
 }
 
 function fetchAndIngest(year, logId) {
   return new Promise((resolve, reject) => {
-    const url = 'https://data.open-contracting.org/en/publication/147/download?name=' + year + '.jsonl.gz';
+    // Try multiple valid URL patterns for the OCP data registry
+    const urls = [
+      `https://data.open-contracting.org/en/publication/147/download?name=${year}.jsonl.gz`,
+      `https://data.open-contracting.org/data/kenya/ppra/ocds-5whusi/${year}.jsonl.gz`,
+      `https://data.open-contracting.org/data/kenya/ppra/ocds-5whusi/all.jsonl.gz`
+    ];
+    let urlIndex = 0;
 
     function doGet(targetUrl, hops) {
-      if (hops > 5) return reject(new Error('Too many redirects'));
-      const mod = targetUrl.startsWith('https') ? require('https') : require('http');
+      if (hops > 5) {
+        console.error(`Too many redirects for ${targetUrl}`);
+        return tryNextUrl();
+      }
+      const mod = targetUrl.startsWith('https') ? https : http;
       const req = mod.get(targetUrl, { timeout: 180000 }, (res) => {
         if (res.statusCode === 301 || res.statusCode === 302) {
           res.resume();
           return doGet(res.headers.location, hops + 1);
+        }
+        if (res.statusCode === 404) {
+          res.resume();
+          console.log(`404 Not Found for ${targetUrl}, trying next URL...`);
+          return tryNextUrl();
         }
         if (res.statusCode !== 200) {
           res.resume();
           return reject(new Error('HTTP ' + res.statusCode + ' from OCP data registry'));
         }
         
-        const gunzip = require('zlib').createGunzip();
+        console.log(`✅ Successfully connected to ${targetUrl}, starting stream...`);
+        const gunzip = zlib.createGunzip();
         res.pipe(gunzip);
         gunzip.setEncoding('utf8');
 
@@ -202,22 +224,29 @@ function fetchAndIngest(year, logId) {
           if (flushing || !batch.length) return;
           flushing = true;
           const rows = batch.splice(0);
-          inserted += await insertBatch(rows);
-          pool.query('UPDATE ocds_sync_log SET records=$1 WHERE id=$2', [inserted, logId]).catch(() => {});
+          try {
+            const count = await insertBatch(rows);
+            inserted += count;
+            pool.query('UPDATE ocds_sync_log SET records=$1 WHERE id=$2', [inserted, logId]).catch(() => {});
+          } catch (err) {
+            console.error('Batch insert error:', err.message);
+          }
           flushing = false;
         }
 
         gunzip.on('data', (chunk) => {
           buffer += chunk;
           const lines = buffer.split('\n');
-          buffer = lines.pop();
+          buffer = lines.pop() || '';
           for (const line of lines) {
             const l = line.trim();
             if (!l) continue;
             try {
               const rec = parseOCDSRecord(JSON.parse(l));
               if (rec) { batch.push(rec); parsed++; }
-            } catch (_) {}
+            } catch (e) {
+              // Ignore individual line parse errors to keep stream alive
+            }
             if (batch.length >= 50) {
               gunzip.pause();
               flush().then(() => gunzip.resume()).catch(() => gunzip.resume());
@@ -227,24 +256,51 @@ function fetchAndIngest(year, logId) {
 
         gunzip.on('end', async () => {
           if (buffer.trim()) {
-            try { const rec = parseOCDSRecord(JSON.parse(buffer)); if (rec) batch.push(rec); } catch (_) {}
+            try { 
+              const rec = parseOCDSRecord(JSON.parse(buffer)); 
+              if (rec) batch.push(rec); 
+            } catch (_) {}
           }
           await flush();
+          console.log(`🎉 Sync complete: parsed ${parsed}, inserted ${inserted} new records.`);
           resolve({ year, parsed, inserted });
         });
 
-        gunzip.on('error', reject);
+        gunzip.on('error', (err) => {
+          console.error('Gunzip error:', err.message);
+          reject(err);
+        });
       });
-      req.on('error', reject);
-      req.on('timeout', () => { req.destroy(); reject(new Error('Download timeout')); });
+      req.on('error', (err) => {
+        console.error('Request error:', err.message);
+        tryNextUrl();
+      });
+      req.on('timeout', () => { 
+        req.destroy(); 
+        console.error('Download timeout, trying next URL...');
+        tryNextUrl(); 
+      });
     }
-    doGet(url, 0);
+
+    function tryNextUrl() {
+      urlIndex++;
+      if (urlIndex < urls.length) {
+        console.log(`🔄 Trying alternative URL: ${urls[urlIndex]}`);
+        doGet(urls[urlIndex], 0);
+      } else {
+        reject(new Error('All download URLs failed (404 or network error)'));
+      }
+    }
+
+    doGet(urls[urlIndex], 0);
   });
 }
 
 router.post('/ocds', async (req, res) => {
   try {
     const { year } = req.body;
+    if (!year) return res.status(400).json({ success: false, error: 'Year is required' });
+    
     const { rows } = await pool.query("INSERT INTO ocds_sync_log (year, status) VALUES ($1, 'running') RETURNING id", [year]);
     
     // Return HTTP 200 immediately
@@ -259,10 +315,12 @@ router.post('/ocds', async (req, res) => {
           req.app.locals.broadcast('new_contracts', { message: result.inserted + ' new contracts imported', count: result.inserted });
         }
       } catch (e) {
+        console.error('❌ Sync background error:', e.message);
         await pool.query("UPDATE ocds_sync_log SET status='failed',error_msg=$1,finished_at=NOW() WHERE id=$2", [e.message, rows[0].id]);
       }
     });
   } catch (e) { 
+    console.error('❌ Sync endpoint error:', e.message);
     res.status(500).json({ success: false, error: e.message }); 
   }
 });
@@ -274,6 +332,5 @@ router.get('/status', async (_req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// IMPORTANT: export so server.js auto-scheduler can call it
 module.exports = router;
 module.exports.fetchAndIngest = fetchAndIngest;
