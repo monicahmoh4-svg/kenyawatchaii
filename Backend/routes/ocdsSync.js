@@ -1,9 +1,9 @@
 const router = require('express').Router();
 const https = require('https');
-const http = require('http');
 const zlib = require('zlib');
 const { pool } = require('../db/index');
 
+// County inference mapping
 const COUNTY_MAP = {
   'Nairobi': ['nairobi','city county','upper hill','westlands','kibera','langata','kasarani','embakasi'],
   'Mombasa': ['mombasa','kilindini','mvita','likoni','changamwe'],
@@ -75,18 +75,30 @@ function inferSector(text) {
   return 'Infrastructure';
 }
 
-function scoreRisk(value, bid_type) {
+function scoreRisk(value, bid_type, supplier_reg_date, awarded_date) {
   let score = 0;
   const flags = [];
+  
+  // Bid type scoring
   const methods = { single_source: 30, direct: 28, restricted: 15, emergency: 10, negotiated: 8, open: 0 };
   score += methods[bid_type] || 0;
   if (bid_type === 'single_source' || bid_type === 'direct')
     flags.push('Single-source/direct award — no competitive bidding');
 
+  // Value scoring
   const v = parseInt(value) || 0;
   if (v >= 5000000000) { score += 20; flags.push('Extremely high value — KES ' + (v/1e9).toFixed(1) + 'B'); }
   else if (v >= 1000000000 && bid_type !== 'open') { score += 18; flags.push('KES ' + (v/1e9).toFixed(1) + 'B via non-open process'); }
   else if (v >= 500000000 && (bid_type === 'single_source' || bid_type === 'direct')) { score += 22; flags.push('KES ' + (v/1e6).toFixed(0) + 'M single-source'); }
+
+  // Company age scoring
+  if (supplier_reg_date && awarded_date) {
+    const regDate = new Date(supplier_reg_date);
+    const awardDate = new Date(awarded_date);
+    const monthsOld = (awardDate - regDate) / (1000 * 60 * 60 * 30);
+    if (monthsOld < 6) { score += 28; flags.push('Company registered only ' + Math.round(monthsOld) + ' months before award'); }
+    else if (monthsOld < 18) { score += 15; flags.push('Company less than 18 months old at award'); }
+  }
 
   score = Math.min(Math.max(score, 0), 100);
   const risk_level = score >= 75 ? 'HIGH' : score >= 40 ? 'MEDIUM' : 'LOW';
@@ -100,7 +112,7 @@ function parseOCDSRecord(record) {
   
   const releases = Array.isArray(record.releases) ? record.releases : [record];
   let description = '', supplier = '', value = 0, bid_type = 'open';
-  let awarded_date = null, procuring_entity = '';
+  let awarded_date = null, procuring_entity = '', supplier_reg_date = null;
 
   for (const r of releases) {
     if (r.tender && !description) {
@@ -137,14 +149,23 @@ function parseOCDSRecord(record) {
   const contract_id = ('OCDS-' + ocid.replace(/[^a-zA-Z0-9-]/g, '-')).slice(0, 100);
   const county = inferCounty(description + ' ' + procuring_entity);
   const sector = inferSector(description);
-  const { score, risk_level, flags } = scoreRisk(value, bid_type);
+  const { score, risk_level, flags } = scoreRisk(value, bid_type, supplier_reg_date, awarded_date);
 
   return { 
-    contract_id, description: description.slice(0, 500), county, sector,
-    value, supplier: (supplier || 'Unknown').slice(0, 200), bid_type,
-    awarded_date: awarded_date || null, risk_score: score, risk_level,
-    flags: JSON.stringify(flags), procuring_entity: procuring_entity.slice(0, 200),
-    ocds_ocid: ocid.slice(0, 100) 
+    contract_id, 
+    description: description.slice(0, 500), 
+    county, 
+    sector,
+    value, 
+    supplier: (supplier || 'Unknown').slice(0, 200), 
+    bid_type,
+    awarded_date: awarded_date || null, 
+    risk_score: score, 
+    risk_level,
+    flags: JSON.stringify(flags), 
+    procuring_entity: procuring_entity.slice(0, 200),
+    ocds_ocid: ocid.slice(0, 100),
+    source: 'ppip_ocds'
   };
 }
 
@@ -159,7 +180,7 @@ async function insertBatch(records) {
           `INSERT INTO contracts
              (contract_id, description, county, sector, value, supplier, bid_type,
               awarded_date, risk_score, risk_level, flags, procuring_entity, ocds_ocid, source)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'ppip_ocds')
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
            ON CONFLICT (contract_id) DO UPDATE SET
              description = EXCLUDED.description,
              risk_score  = EXCLUDED.risk_score,
@@ -169,7 +190,7 @@ async function insertBatch(records) {
            RETURNING (xmax = 0) AS is_new`,
           [r.contract_id, r.description, r.county, r.sector, r.value,
            r.supplier, r.bid_type, r.awarded_date, r.risk_score,
-           r.risk_level, r.flags, r.procuring_entity, r.ocds_ocid]
+           r.risk_level, r.flags, r.procuring_entity, r.ocds_ocid, r.source]
         );
         if (result.rows[0]?.is_new) count++;
       } catch (err) {
@@ -184,11 +205,10 @@ async function insertBatch(records) {
 
 function fetchAndIngest(year, logId) {
   return new Promise((resolve, reject) => {
-    // Try multiple valid URL patterns for the OCP data registry
+    // Multiple URL patterns to try
     const urls = [
       `https://data.open-contracting.org/en/publication/147/download?name=${year}.jsonl.gz`,
-      `https://data.open-contracting.org/data/kenya/ppra/ocds-5whusi/${year}.jsonl.gz`,
-      `https://data.open-contracting.org/data/kenya/ppra/ocds-5whusi/all.jsonl.gz`
+      `https://data.open-contracting.org/data/kenya/ppra/ocds-5whusi/${year}.jsonl.gz`
     ];
     let urlIndex = 0;
 
@@ -197,15 +217,19 @@ function fetchAndIngest(year, logId) {
         console.error(`Too many redirects for ${targetUrl}`);
         return tryNextUrl();
       }
-      const mod = targetUrl.startsWith('https') ? https : http;
-      const req = mod.get(targetUrl, { timeout: 180000 }, (res) => {
+      
+      console.log(`📥 Attempting to download from: ${targetUrl}`);
+      
+      const mod = targetUrl.startsWith('https') ? https : require('http');
+      const req = mod.get(targetUrl, { timeout: 300000 }, (res) => {
         if (res.statusCode === 301 || res.statusCode === 302) {
           res.resume();
+          console.log(`↩️ Redirecting to: ${res.headers.location}`);
           return doGet(res.headers.location, hops + 1);
         }
         if (res.statusCode === 404) {
           res.resume();
-          console.log(`404 Not Found for ${targetUrl}, trying next URL...`);
+          console.log(`❌ 404 Not Found for ${targetUrl}, trying next URL...`);
           return tryNextUrl();
         }
         if (res.statusCode !== 200) {
@@ -213,7 +237,7 @@ function fetchAndIngest(year, logId) {
           return reject(new Error('HTTP ' + res.statusCode + ' from OCP data registry'));
         }
         
-        console.log(`✅ Successfully connected to ${targetUrl}, starting stream...`);
+        console.log(`✅ Successfully connected, starting stream processing...`);
         const gunzip = zlib.createGunzip();
         res.pipe(gunzip);
         gunzip.setEncoding('utf8');
@@ -227,7 +251,8 @@ function fetchAndIngest(year, logId) {
           try {
             const count = await insertBatch(rows);
             inserted += count;
-            pool.query('UPDATE ocds_sync_log SET records=$1 WHERE id=$2', [inserted, logId]).catch(() => {});
+            console.log(` Inserted ${count} contracts (Total: ${inserted})`);
+            await pool.query('UPDATE ocds_sync_log SET records=$1 WHERE id=$2', [inserted, logId]);
           } catch (err) {
             console.error('Batch insert error:', err.message);
           }
@@ -245,7 +270,7 @@ function fetchAndIngest(year, logId) {
               const rec = parseOCDSRecord(JSON.parse(l));
               if (rec) { batch.push(rec); parsed++; }
             } catch (e) {
-              // Ignore individual line parse errors to keep stream alive
+              // Ignore individual line parse errors
             }
             if (batch.length >= 50) {
               gunzip.pause();
@@ -262,7 +287,7 @@ function fetchAndIngest(year, logId) {
             } catch (_) {}
           }
           await flush();
-          console.log(`🎉 Sync complete: parsed ${parsed}, inserted ${inserted} new records.`);
+          console.log(`🎉 Sync complete: parsed ${parsed} records, inserted ${inserted} new contracts.`);
           resolve({ year, parsed, inserted });
         });
 
@@ -271,10 +296,12 @@ function fetchAndIngest(year, logId) {
           reject(err);
         });
       });
+      
       req.on('error', (err) => {
         console.error('Request error:', err.message);
         tryNextUrl();
       });
+      
       req.on('timeout', () => { 
         req.destroy(); 
         console.error('Download timeout, trying next URL...');
@@ -285,10 +312,10 @@ function fetchAndIngest(year, logId) {
     function tryNextUrl() {
       urlIndex++;
       if (urlIndex < urls.length) {
-        console.log(`🔄 Trying alternative URL: ${urls[urlIndex]}`);
+        console.log(`🔄 Trying alternative URL (${urlIndex + 1}/${urls.length}): ${urls[urlIndex]}`);
         doGet(urls[urlIndex], 0);
       } else {
-        reject(new Error('All download URLs failed (404 or network error)'));
+        reject(new Error('All download URLs failed (404 or network error). The PPRA may not have published data for this year yet.'));
       }
     }
 
@@ -301,7 +328,12 @@ router.post('/ocds', async (req, res) => {
     const { year } = req.body;
     if (!year) return res.status(400).json({ success: false, error: 'Year is required' });
     
-    const { rows } = await pool.query("INSERT INTO ocds_sync_log (year, status) VALUES ($1, 'running') RETURNING id", [year]);
+    console.log(` Starting OCDS sync for year ${year}...`);
+    
+    const { rows } = await pool.query(
+      "INSERT INTO ocds_sync_log (year, status) VALUES ($1, 'running') ON CONFLICT (year) DO UPDATE SET status='running', records=0, error_msg=NULL, started_at=NOW() RETURNING id", 
+      [year]
+    );
     
     // Return HTTP 200 immediately
     res.json({ success: true, message: 'Sync started in background', logId: rows[0].id });
@@ -310,9 +342,10 @@ router.post('/ocds', async (req, res) => {
     setImmediate(async () => {
       try {
         const result = await fetchAndIngest(year, rows[0].id);
-        await pool.query("UPDATE ocds_sync_log SET status='complete',records=$1,finished_at=NOW() WHERE id=$2", [result.inserted, rows[0].id]);
+        await pool.query("UPDATE ocds_sync_log SET status='complete',finished_at=NOW() WHERE id=$2", [result.inserted, rows[0].id]);
+        console.log(`✅ OCDS sync completed successfully: ${result.inserted} new contracts imported`);
         if (req.app.locals.broadcast && result.inserted > 0) {
-          req.app.locals.broadcast('new_contracts', { message: result.inserted + ' new contracts imported', count: result.inserted });
+          req.app.locals.broadcast('new_contracts', { message: result.inserted + ' new contracts imported', count: result.inserted, year });
         }
       } catch (e) {
         console.error('❌ Sync background error:', e.message);
@@ -332,5 +365,6 @@ router.get('/status', async (_req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// IMPORTANT: export so server.js auto-scheduler can call it
 module.exports = router;
 module.exports.fetchAndIngest = fetchAndIngest;
