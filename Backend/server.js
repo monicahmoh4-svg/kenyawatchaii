@@ -21,6 +21,7 @@ function broadcastNotification(event, data) {
 app.locals.broadcast = broadcastNotification;
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
+const FRONTEND_DIR = path.join(__dirname, '..', 'frontend', 'public');
 const ADMIN_DIR = path.join(__dirname, 'admin');
 
 // ── Security & Middleware ─────────────────────────────────────────────────────
@@ -28,6 +29,7 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: '*', methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'], allowedHeaders: ['Content-Type','Authorization'] }));
 app.options('*', cors());
 
+// ── Rate limiters (Correct order, NO /api/sync limiter) ───────────────────────
 app.use('/api/ai', rateLimit({ windowMs: 60000, max: 40, standardHeaders: true, legacyHeaders: false }));
 app.use('/api/chatbot', rateLimit({ windowMs: 60000, max: 40, standardHeaders: true, legacyHeaders: false }));
 app.use('/api', rateLimit({ windowMs: 60000, max: 500, standardHeaders: true, legacyHeaders: false }));
@@ -36,7 +38,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use((req, _res, next) => { console.log(req.method + ' ' + req.path); next(); });
 
-// ─ Admin panel ───────────────────────────────────────────────────────────────
+// ── Admin panel ───────────────────────────────────────────────────────────────
 app.use('/admin', express.static(ADMIN_DIR, { index: 'index.html' }));
 app.get('/admin', (_req, res) => res.sendFile(path.join(ADMIN_DIR, 'index.html')));
 app.get('/admin/', (_req, res) => res.sendFile(path.join(ADMIN_DIR, 'index.html')));
@@ -55,7 +57,7 @@ app.get('/health', async (_req, res) => {
   });
 });
 
-// ── Server-Sent Events ───────────────────────────────────────────────────────
+// ── Server-Sent Events ────────────────────────────────────────────────────────
 app.get('/api/notifications/stream', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -71,7 +73,7 @@ app.get('/api/notifications/stream', (req, res) => {
   req.on('close', () => { clearInterval(ping); sseClients.delete(res); });
 });
 
-// ─ Dashboard stats ───────────────────────────────────────────────────────────
+// ── Dashboard stats ───────────────────────────────────────────────────────────
 app.get('/api/stats', async (_req, res) => {
   try {
     const [c, r, g] = await Promise.all([
@@ -95,7 +97,11 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/ghost-projects', require('./routes/ghostProjects'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/chatbot', require('./routes/chatbot'));
-app.use('/api/sync', require('./routes/ocdsSync')); // Now works perfectly because ocdsSync exports the router directly
+app.use('/api/sync', require('./routes/ocdsSync'));
+
+// ── Serve frontend SPA ────────────────────────────────────────────────────────
+app.use(express.static(FRONTEND_DIR));
+app.get('*', (_req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
 
 // ── Global error handler ──────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
@@ -103,37 +109,28 @@ app.use((err, req, res, next) => {
   if (!res.headersSent) res.status(err.status || 500).json({ success: false, error: err.message });
 });
 
-// ── Auto-sync OCDS data every 6 hours ─────────────────────────────────────────
+// ── Auto-sync scheduler ───────────────────────────────────────────────────────
 function scheduleAutoSync() {
   setInterval(async () => {
     if (!dbReady) return;
-    console.log('⏰ Auto-sync: fetching latest PPIP OCDS contracts...');
-    try {
-      const year = new Date().getFullYear();
-      const { rows } = await pool.query("INSERT INTO ocds_sync_log (year, status) VALUES ($1,'running') RETURNING id", [year]);
-      // CRITICAL FIX: Read fetchAndIngest correctly from the router object
-      const syncRouter = require('./routes/ocdsSync');
-      const result = await syncRouter.fetchAndIngest(year, rows[0].id);
-      await pool.query("UPDATE ocds_sync_log SET status='complete',records=$1,finished_at=NOW() WHERE id=$2", [result.inserted, rows[0].id]);
-      if (result.inserted > 0) {
-        broadcastNotification('new_contracts', { message: result.inserted + ' new contracts imported from PPIP OCDS', year, count: result.inserted, timestamp: new Date().toISOString() });
-        console.log('✅ Auto-sync complete: ' + result.inserted + ' contracts imported');
-      }
-    } catch (e) { console.error('Auto-sync error:', e.message); }
+    const year = new Date().getFullYear();
+    const { rows } = await pool.query(
+      "INSERT INTO ocds_sync_log (year, status) VALUES ($1,'running') RETURNING id", [year]
+    );
+    const { fetchAndIngest } = require('./routes/ocdsSync');
+    fetchAndIngest(year, rows[0].id)
+      .then(r => {
+        pool.query("UPDATE ocds_sync_log SET status='complete',records=$1,finished_at=NOW() WHERE id=$2", [r.inserted, rows[0].id]);
+        if (r.inserted > 0) broadcastNotification('new_contracts', { message: r.inserted + ' new contracts imported', count: r.inserted });
+      })
+      .catch(e => pool.query("UPDATE ocds_sync_log SET status='failed',error_msg=$1,finished_at=NOW() WHERE id=$2", [e.message, rows[0].id]));
   }, 6 * 60 * 60 * 1000);
-  console.log('⏰ Auto-sync scheduled every 6 hours');
 }
 
-// ── Startup (app.listen FIRST for Render healthcheck) ─────────────────────────
+// ── Startup order: listen FIRST ───────────────────────────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
-  console.log('🚀 KenyaWatch AI v3.3 on port ' + PORT);
-  console.log('🌐 Frontend : /');
-  console.log('🖥 Admin : /admin');
-  console.log('📡 SSE feed : /api/notifications/stream');
+  console.log('🚀 KenyaWatch AI on port ' + PORT);
+  initDB()
+    .then(() => { dbReady = true; scheduleAutoSync(); console.log('✅ Database ready'); })
+    .catch(e  => console.error('DB init failed:', e.message));
 });
-
-initDB().then(() => {
-  dbReady = true;
-  console.log('✅ Database ready');
-  scheduleAutoSync();
-}).catch(e => console.error(' DB init failed:', e.message));
