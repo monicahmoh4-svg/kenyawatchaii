@@ -36,7 +36,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use((req, _res, next) => { console.log(req.method + ' ' + req.path); next(); });
 
-// ── Admin panel ───────────────────────────────────────────────────────────────
+// ─ Admin panel ───────────────────────────────────────────────────────────────
 app.use('/admin', express.static(ADMIN_DIR, { index: 'index.html' }));
 app.get('/admin', (_req, res) => res.sendFile(path.join(ADMIN_DIR, 'index.html')));
 app.get('/admin/', (_req, res) => res.sendFile(path.join(ADMIN_DIR, 'index.html')));
@@ -55,7 +55,7 @@ app.get('/health', async (_req, res) => {
   });
 });
 
-// ── Server-Sent Events ────────────────────────────────────────────────────────
+// ── Server-Sent Events ───────────────────────────────────────────────────────
 app.get('/api/notifications/stream', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -71,7 +71,7 @@ app.get('/api/notifications/stream', (req, res) => {
   req.on('close', () => { clearInterval(ping); sseClients.delete(res); });
 });
 
-// ── Dashboard stats ───────────────────────────────────────────────────────────
+// ─ Dashboard stats ───────────────────────────────────────────────────────────
 app.get('/api/stats', async (_req, res) => {
   try {
     const [c, r, g] = await Promise.all([
@@ -95,7 +95,7 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/ghost-projects', require('./routes/ghostProjects'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/chatbot', require('./routes/chatbot'));
-app.use('/api/sync', require('./routes/ocdsSync'));
+app.use('/api/sync', require('./routes/ocdsSync')); // Now works perfectly because ocdsSync exports the router directly
 
 // ── Global error handler ──────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
@@ -111,8 +111,9 @@ function scheduleAutoSync() {
     try {
       const year = new Date().getFullYear();
       const { rows } = await pool.query("INSERT INTO ocds_sync_log (year, status) VALUES ($1,'running') RETURNING id", [year]);
-      const { fetchAndIngest } = require('./routes/ocdsSync');
-      const result = await fetchAndIngest(year, rows[0].id);
+      // CRITICAL FIX: Read fetchAndIngest correctly from the router object
+      const syncRouter = require('./routes/ocdsSync');
+      const result = await syncRouter.fetchAndIngest(year, rows[0].id);
       await pool.query("UPDATE ocds_sync_log SET status='complete',records=$1,finished_at=NOW() WHERE id=$2", [result.inserted, rows[0].id]);
       if (result.inserted > 0) {
         broadcastNotification('new_contracts', { message: result.inserted + ' new contracts imported from PPIP OCDS', year, count: result.inserted, timestamp: new Date().toISOString() });
@@ -135,4 +136,4 @@ initDB().then(() => {
   dbReady = true;
   console.log('✅ Database ready');
   scheduleAutoSync();
-}).catch(e => console.error('⚠ DB init failed:', e.message));
+}).catch(e => console.error(' DB init failed:', e.message));
