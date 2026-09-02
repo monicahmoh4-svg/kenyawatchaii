@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const fs = require('fs');
 const { initDB, pool } = require('./db/index');
 
 const app = express();
@@ -21,7 +22,8 @@ function broadcastNotification(event, data) {
 app.locals.broadcast = broadcastNotification;
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
-const FRONTEND_DIR = path.join(__dirname, '..', 'frontend', 'public');
+// FIXED: Points to 'frontend' directly, matching the generated project structure
+const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
 const ADMIN_DIR = path.join(__dirname, 'admin');
 
 // ── Security & Middleware ─────────────────────────────────────────────────────
@@ -99,9 +101,17 @@ app.use('/api/ai', require('./routes/ai'));
 app.use('/api/chatbot', require('./routes/chatbot'));
 app.use('/api/sync', require('./routes/ocdsSync'));
 
-// ── Serve frontend SPA ────────────────────────────────────────────────────────
-app.use(express.static(FRONTEND_DIR));
-app.get('*', (_req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
+// ── Serve frontend SPA (FIXED: safely checks if directory exists) ─────────────
+if (fs.existsSync(FRONTEND_DIR)) {
+  app.use(express.static(FRONTEND_DIR));
+  app.get('*', (_req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
+} else {
+  // If frontend is deployed separately (e.g., on Vercel), gracefully return API info
+  app.get('/', (_req, res) => res.json({ 
+    message: 'KenyaWatch AI Backend is running successfully.',
+    docs: 'Connect your frontend to this API endpoint.'
+  }));
+}
 
 // ── Global error handler ──────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
