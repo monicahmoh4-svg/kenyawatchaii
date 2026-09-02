@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KenyaWatch AI — Anti-Corruption Intelligence</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' }</script>
+  <style>
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+  
+  <nav class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold leading-tight">KenyaWatch AI</h1>
+            <p class="text-[10px] text-slate-400 uppercase tracking-wider">Anti-Corruption Intelligence</p>
+          </div>
+        </div>
+        <div class="hidden md:flex items-center gap-1">
+          <button onclick="showTab('v-dashboard')" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 text-emerald-400 bg-slate-800" data-tab="v-dashboard">⬛ Overview</button>
+          <button onclick="showTab('v-procurement')" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 text-slate-300" data-tab="v-procurement">📋 Procurement</button>
+          <button onclick="showTab('v-ghost')" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 text-slate-300" data-tab="v-ghost">👻 Ghost Projects</button>
+          <button onclick="showTab('v-report')" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 text-slate-300" data-tab="v-report">🚨 Report</button>
+          <button onclick="showTab('v-ai')" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 text-slate-300" data-tab="v-ai">🤖 AI Investigator</button>
+          <button onclick="showTab('v-sync')" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 text-slate-300" data-tab="v-sync">🔄 Sync Data</button>
+          <button onclick="showTab('v-about')" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 text-slate-300" data-tab="v-about">ℹ About</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="flex-grow max-w-7xl mx-auto px-4 py-8 w-full">
+    <div id="v-dashboard" class="tab-content active space-y-8">
+      <div class="text-center py-12 bg-gradient-to-b from-emerald-900/20 to-transparent rounded-2xl border border-emerald-900/30">
+        <h2 class="text-4xl md:text-5xl font-bold mb-4">Exposing Corruption. Protecting Kenya.</h2>
+        <p class="text-slate-400 max-w-2xl mx-auto mb-6">Live AI analysis of government procurement contracts from Kenya's official PPRA portal. Satellite ghost project detection. Anonymous citizen reporting.</p>
+        <div class="flex justify-center gap-4">
+          <button onclick="showTab('v-procurement')" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition">🔍 Scan Contracts</button>
+          <button onclick="showTab('v-report')" class="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl border border-slate-700 transition">🚨 Report Corruption</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-slate-900 p-6 rounded-xl border border-slate-800 text-center"><div class="text-3xl font-bold text-red-400" id="dash-flagged">--</div><div class="text-xs text-slate-400 uppercase mt-1">Flagged Contracts</div></div>
+        <div class="bg-slate-900 p-6 rounded-xl border border-slate-800 text-center"><div class="text-3xl font-bold text-purple-400" id="dash-ghost">--</div><div class="text-xs text-slate-400 uppercase mt-1">Ghost Projects</div></div>
+        <div class="bg-slate-900 p-6 rounded-xl border border-slate-800 text-center"><div class="text-3xl font-bold text-blue-400" id="dash-reports">--</div><div class="text-xs text-slate-400 uppercase mt-1">Reports (30 days)</div></div>
+        <div class="bg-slate-900 p-6 rounded-xl border border-slate-800 text-center"><div class="text-3xl font-bold text-emerald-400" id="dash-funds">KES --</div><div class="text-xs text-slate-400 uppercase mt-1">Funds at Risk</div></div>
+      </div>
+    </div>
+
+    <div id="v-procurement" class="tab-content space-y-6">
+      <div class="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-slate-900 p-4 rounded-xl border border-slate-800">
+        <input type="text" id="search-contracts" placeholder="Search contracts, suppliers..." class="bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 w-full md:w-96 focus:ring-2 focus:ring-emerald-500 outline-none" onkeyup="loadC()">
+      </div>
+      <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-800 text-slate-400"><tr><th class="p-4">Contract ID</th><th class="p-4">Description</th><th class="p-4">County</th><th class="p-4">Value (KES)</th><th class="p-4">Risk</th></tr></thead>
+          <tbody id="contracts-table" class="divide-y divide-slate-800"><tr><td colspan="5" class="p-8 text-center text-slate-500">Loading contracts...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="v-ghost" class="tab-content space-y-6">
+      <h2 class="text-2xl font-bold mb-4">🛰 Satellite Ghost Project Detection</h2>
+      <div id="ghost-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"><div class="col-span-full text-center py-12 text-slate-500">Loading satellite intelligence...</div></div>
+    </div>
+
+    <div id="v-report" class="tab-content max-w-2xl mx-auto space-y-6">
+      <div class="bg-slate-900 p-8 rounded-xl border border-slate-800">
+        <h2 class="text-2xl font-bold mb-2">🚨 Submit a Report</h2>
+        <p class="text-slate-400 text-sm mb-6">Anonymous · Encrypted · AI-verified</p>
+        <form id="report-form" onsubmit="submitReport(event)" class="space-y-4">
+          <select name="type" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3"><option value="">Type of Corruption *</option><option>Bribery / Kickbacks</option><option>Ghost project / Fake delivery</option><option>Procurement fraud</option><option>Embezzlement of public funds</option></select>
+          <select name="county" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3"><option value="">County *</option><option>Nairobi</option><option>Mombasa</option><option>Kisumu</option><option>Kiambu</option><option>Kisii</option><option>Turkana</option><option>Marsabit</option></select>
+          <textarea name="description" required rows="4" placeholder="Describe what happened *" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3"></textarea>
+          <button type="submit" class="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition">Submit Report Securely</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="v-ai" class="tab-content space-y-6 max-w-4xl mx-auto">
+      <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden flex flex-col h-[600px]">
+        <div class="p-4 border-b border-slate-800 bg-slate-800/50"><h3 class="font-bold flex items-center gap-2">🤖 AI Investigator <span class="text-xs font-normal text-slate-400">Google Gemini 2.5 Flash</span></h3></div>
+        <div id="chat-history" class="flex-1 overflow-y-auto p-4 space-y-4"><div class="bg-slate-800/50 p-4 rounded-lg rounded-tl-none max-w-[80%]"><p class="text-sm"><strong>Habari!</strong> I'm KenyaWatch AI. What would you like to investigate?</p></div></div>
+        <div class="p-4 border-t border-slate-800 bg-slate-800/30">
+          <form onsubmit="sendAI(event)" class="flex gap-2">
+            <input type="text" id="ai-input" placeholder="Ask the AI investigator anything..." class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none" required>
+            <button type="submit" class="px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg transition">Send</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div id="v-sync" class="tab-content space-y-6">
+      <div class="bg-slate-900 p-8 rounded-xl border border-slate-800">
+        <h2 class="text-2xl font-bold mb-4">📥 PPRA Public Procurement Portal (PPIP)</h2>
+        <div class="flex gap-4 items-end">
+          <div><label class="block text-sm text-slate-400 mb-1">Select Year</label><select id="sync-year" class="bg-slate-950 border border-slate-800 rounded-lg px-4 py-2"><option>2025</option><option>2024</option><option>2023</option></select></div>
+          <button onclick="startSync()" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition">🔄 Start OCDS Sync</button>
+          <button onclick="loadSyncStatus()" class="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg transition">📊 Refresh Status</button>
+        </div>
+        <div id="sync-status" class="mt-6 p-4 bg-slate-950 rounded-lg border border-slate-800 text-sm text-slate-400">Click Refresh Status to load.</div>
+      </div>
+    </div>
+
+    <div id="v-about" class="tab-content max-w-3xl mx-auto space-y-8">
+      <div class="text-center"><h2 class="text-3xl font-bold mb-4">About KenyaWatch AI</h2><p class="text-slate-400">Anti-Corruption Intelligence Platform · v3.3.0</p></div>
+      <div class="bg-slate-900 p-8 rounded-xl border border-slate-800 text-center">
+        <h3 class="text-xl font-bold mb-4">🧑‍💻 Built By</h3>
+        <p class="text-lg font-semibold">Douglas Mwebi (Daggy)</p>
+        <p class="text-slate-400">Daggy Techs · Kisii, Kenya</p>
+        <p class="text-slate-400 mt-2">daggytechs@gmail.com | +254 796 820 013</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // ⚠️ CRITICAL: If deploying frontend to Vercel and backend to Render separately, 
+    // replace "" below with your actual Render backend URL (e.g., "https://your-app.onrender.com")
+    const API_BASE = ""; 
+
+    function showTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-emerald-400', 'bg-slate-800');
+        btn.classList.add('text-slate-300');
+        if (btn.dataset.tab === tabId) { btn.classList.add('text-emerald-400', 'bg-slate-800'); btn.classList.remove('text-slate-300'); }
+      });
+      if (tabId === 'v-dashboard') loadDash();
+      if (tabId === 'v-procurement') loadC();
+      if (tabId === 'v-ghost') loadGhost();
+      if (tabId === 'v-sync') loadSyncStatus();
+    }
+
+    async function loadDash() {
+      try {
+        const res = await fetch(API_BASE + '/api/stats');
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('dash-flagged').textContent = data.data.contracts_flagged;
+          document.getElementById('dash-ghost').textContent = data.data.ghost_projects;
+          document.getElementById('dash-reports').textContent = data.data.reports_30d;
+          document.getElementById('dash-funds').textContent = 'KES ' + (data.data.funds_at_risk / 1000000000).toFixed(1) + 'B';
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadC() {
+      const search = document.getElementById('search-contracts').value;
+      const url = API_BASE + '/api/contracts?search=' + encodeURIComponent(search) + '&limit=20';
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const tbody = document.getElementById('contracts-table');
+        tbody.innerHTML = '';
+        if (data.success && data.data.length > 0) {
+          data.data.forEach(c => {
+            const riskColor = c.risk_level === 'HIGH' ? 'text-red-400 bg-red-900/20' : (c.risk_level === 'MEDIUM' ? 'text-yellow-400 bg-yellow-900/20' : 'text-emerald-400 bg-emerald-900/20');
+            tbody.innerHTML += '<tr class="hover:bg-slate-800/50 transition"><td class="p-4 font-mono text-xs">' + c.contract_id + '</td><td class="p-4">' + (c.description ? c.description.substring(0, 50) : '') + '...</td><td class="p-4">' + c.county + '</td><td class="p-4">' + parseInt(c.value || 0).toLocaleString() + '</td><td class="p-4"><span class="px-2 py-1 rounded text-xs font-bold ' + riskColor + '">' + c.risk_level + ' (' + c.risk_score + ')</span></td></tr>';
+          });
+        } else { tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-slate-500">No contracts found.</td></tr>'; }
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadGhost() {
+      try {
+        const res = await fetch(API_BASE + '/api/ghost-projects');
+        const data = await res.json();
+        const grid = document.getElementById('ghost-grid');
+        grid.innerHTML = '';
+        if (data.success && data.data.length > 0) {
+          data.data.forEach(g => {
+            grid.innerHTML += '<div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden group"><div class="h-48 bg-slate-800 relative overflow-hidden"><img src="' + (g.satellite_image_url || 'https://via.placeholder.com/640x400?text=Satellite+Image') + '" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" alt="Satellite"><div class="absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold border ' + (g.detection_status === 'ghost' ? 'text-red-400 border-red-900/50 bg-red-900/10' : 'text-yellow-400 border-yellow-900/50 bg-yellow-900/10') + '">' + g.detection_status.toUpperCase() + '</div></div><div class="p-4"><h3 class="font-bold mb-1">' + g.project_name + '</h3><p class="text-xs text-slate-400 mb-3">' + g.county + ' County</p><div class="flex justify-between items-center text-sm"><span class="text-red-400 font-bold">KES ' + (g.amount_at_risk/1000000).toFixed(1) + 'M</span><span class="text-slate-500">' + g.confidence_score + '% conf</span></div></div></div>';
+          });
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function submitReport(e) {
+      e.preventDefault();
+      const form = e.target;
+      const payload = { type: form.type.value, county: form.county.value, description: form.description.value, amount: 0, anonymous: true };
+      try {
+        const res = await fetch(API_BASE + '/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const data = await res.json();
+        if (data.success) { alert('Report submitted securely. Case Number: ' + data.data.case_number); form.reset(); } else { alert('Error: ' + data.error); }
+      } catch (err) { alert('Network error. Ensure API_BASE is set correctly if deployed separately.'); }
+    }
+
+    async function sendAI(e) {
+      e.preventDefault();
+      const input = document.getElementById('ai-input');
+      const msg = input.value.trim();
+      if (!msg) return;
+      const history = document.getElementById('chat-history');
+      history.innerHTML += '<div class="bg-emerald-900/20 border border-emerald-900/50 p-4 rounded-lg rounded-tr-none max-w-[80%] ml-auto"><p class="text-sm">' + msg + '</p></div>';
+      input.value = '';
+      history.innerHTML += '<div id="ai-loading" class="text-slate-500 text-sm p-4">AI is thinking...</div>';
+      history.scrollTop = history.scrollHeight;
+      try {
+        const res = await fetch(API_BASE + '/api/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, session_id: 'web-user-1' }) });
+        const data = await res.json();
+        document.getElementById('ai-loading').remove();
+        history.innerHTML += '<div class="bg-slate-800/50 p-4 rounded-lg rounded-tl-none max-w-[80%]"><p class="text-sm whitespace-pre-wrap">' + data.reply + '</p></div>';
+        history.scrollTop = history.scrollHeight;
+      } catch (err) { document.getElementById('ai-loading').textContent = 'Error contacting AI.'; }
+    }
+
+    async function startSync() {
+      const year = document.getElementById('sync-year').value;
+      document.getElementById('sync-status').innerHTML = '<span class="text-blue-400">⏳ Syncing in background...</span>';
+      try { await fetch(API_BASE + '/api/sync/ocds', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ year }) }); } catch (e) { console.error(e); }
+    }
+
+    async function loadSyncStatus() {
+      try {
+        const res = await fetch(API_BASE + '/api/sync/status');
+        const data = await res.json();
+        const div = document.getElementById('sync-status');
+        if (data.success && data.data.length > 0) { div.innerHTML = data.data.map(log => '<div class="flex justify-between py-2 border-b border-slate-800 last:border-0"><span>' + log.year + ' · ' + log.status.toUpperCase() + '</span><span class="text-emerald-400">' + (log.records || 0) + ' records</span></div>').join(''); } else { div.innerHTML = 'No sync history found.'; }
+      } catch (e) { console.error(e); }
+    }
+
+    loadDash();
+  </script>
+</body>
+</html>
