@@ -45,4 +45,5 @@ router.post('/chat', async (req, res) => {
     reqHttps.end();
   } catch (e) { res.json({ success: true, reply: 'AI error: ' + e.message, fallback: true }); }
 });
+
 module.exports = router;
