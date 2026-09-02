@@ -78,20 +78,16 @@ function inferSector(text) {
 function scoreRisk(value, bid_type, supplier_reg_date, awarded_date) {
   let score = 0;
   const flags = [];
-  
-  // Bid type scoring
   const methods = { single_source: 30, direct: 28, restricted: 15, emergency: 10, negotiated: 8, open: 0 };
   score += methods[bid_type] || 0;
   if (bid_type === 'single_source' || bid_type === 'direct')
     flags.push('Single-source/direct award — no competitive bidding');
 
-  // Value scoring
   const v = parseInt(value) || 0;
   if (v >= 5000000000) { score += 20; flags.push('Extremely high value — KES ' + (v/1e9).toFixed(1) + 'B'); }
   else if (v >= 1000000000 && bid_type !== 'open') { score += 18; flags.push('KES ' + (v/1e9).toFixed(1) + 'B via non-open process'); }
   else if (v >= 500000000 && (bid_type === 'single_source' || bid_type === 'direct')) { score += 22; flags.push('KES ' + (v/1e6).toFixed(0) + 'M single-source'); }
 
-  // Company age scoring
   if (supplier_reg_date && awarded_date) {
     const regDate = new Date(supplier_reg_date);
     const awardDate = new Date(awarded_date);
@@ -152,20 +148,11 @@ function parseOCDSRecord(record) {
   const { score, risk_level, flags } = scoreRisk(value, bid_type, supplier_reg_date, awarded_date);
 
   return { 
-    contract_id, 
-    description: description.slice(0, 500), 
-    county, 
-    sector,
-    value, 
-    supplier: (supplier || 'Unknown').slice(0, 200), 
-    bid_type,
-    awarded_date: awarded_date || null, 
-    risk_score: score, 
-    risk_level,
-    flags: JSON.stringify(flags), 
-    procuring_entity: procuring_entity.slice(0, 200),
-    ocds_ocid: ocid.slice(0, 100),
-    source: 'ppip_ocds'
+    contract_id, description: description.slice(0, 500), county, sector,
+    value, supplier: (supplier || 'Unknown').slice(0, 200), bid_type,
+    awarded_date: awarded_date || null, risk_score: score, risk_level,
+    flags: JSON.stringify(flags), procuring_entity: procuring_entity.slice(0, 200),
+    ocds_ocid: ocid.slice(0, 100), source: 'ppip_ocds'
   };
 }
 
@@ -205,7 +192,6 @@ async function insertBatch(records) {
 
 function fetchAndIngest(year, logId) {
   return new Promise((resolve, reject) => {
-    // Multiple URL patterns to try
     const urls = [
       `https://data.open-contracting.org/en/publication/147/download?name=${year}.jsonl.gz`,
       `https://data.open-contracting.org/data/kenya/ppra/ocds-5whusi/${year}.jsonl.gz`
@@ -328,10 +314,11 @@ router.post('/ocds', async (req, res) => {
     const { year } = req.body;
     if (!year) return res.status(400).json({ success: false, error: 'Year is required' });
     
-    console.log(` Starting OCDS sync for year ${year}...`);
+    console.log(`🚀 Starting OCDS sync for year ${year}...`);
     
+    // FIXED: Removed ON CONFLICT clause which was crashing the DB query
     const { rows } = await pool.query(
-      "INSERT INTO ocds_sync_log (year, status) VALUES ($1, 'running') ON CONFLICT (year) DO UPDATE SET status='running', records=0, error_msg=NULL, started_at=NOW() RETURNING id", 
+      "INSERT INTO ocds_sync_log (year, status) VALUES ($1, 'running') RETURNING id", 
       [year]
     );
     
@@ -342,19 +329,19 @@ router.post('/ocds', async (req, res) => {
     setImmediate(async () => {
       try {
         const result = await fetchAndIngest(year, rows[0].id);
-        await pool.query("UPDATE ocds_sync_log SET status='complete',finished_at=NOW() WHERE id=$2", [result.inserted, rows[0].id]);
+        await pool.query("UPDATE ocds_sync_log SET status='complete', finished_at=NOW() WHERE id=$2", [result.inserted, rows[0].id]);
         console.log(`✅ OCDS sync completed successfully: ${result.inserted} new contracts imported`);
         if (req.app.locals.broadcast && result.inserted > 0) {
           req.app.locals.broadcast('new_contracts', { message: result.inserted + ' new contracts imported', count: result.inserted, year });
         }
       } catch (e) {
         console.error('❌ Sync background error:', e.message);
-        await pool.query("UPDATE ocds_sync_log SET status='failed',error_msg=$1,finished_at=NOW() WHERE id=$2", [e.message, rows[0].id]);
+        await pool.query("UPDATE ocds_sync_log SET status='failed', error_msg=$1, finished_at=NOW() WHERE id=$2", [e.message, rows[0].id]);
       }
     });
   } catch (e) { 
-    console.error('❌ Sync endpoint error:', e.message);
-    res.status(500).json({ success: false, error: e.message }); 
+    console.error('❌ Sync endpoint error:', e);
+    res.status(500).json({ success: false, error: e.message || String(e) }); 
   }
 });
 
@@ -365,6 +352,5 @@ router.get('/status', async (_req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// IMPORTANT: export so server.js auto-scheduler can call it
 module.exports = router;
 module.exports.fetchAndIngest = fetchAndIngest;
