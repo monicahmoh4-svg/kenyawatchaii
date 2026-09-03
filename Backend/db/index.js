@@ -13,6 +13,7 @@ pool.on('error', (err) => console.error('⚠️ DB Pool Error:', err.message));
 const initDB = async () => {
   let client;
   try {
+    console.log('🔄 Connecting to database...');
     client = await pool.connect();
     console.log('✅ Connected to PostgreSQL');
     
@@ -43,7 +44,6 @@ const initDB = async () => {
       );
     `);
 
-    // Check if we need to seed data
     const { rowCount } = await client.query('SELECT 1 FROM contracts LIMIT 1');
     if (rowCount === 0) {
       console.log('🌱 Seeding database with 47-county contract data...');
@@ -55,32 +55,28 @@ const initDB = async () => {
         'Nandi','Baringo','Laikipia','Nakuru','Narok','Kajiado','Kericho','Bomet','Kakamega','Vihiga','Bungoma',
         'Busia','Siaya','Kisumu','Homa Bay','Migori','Kisii','Nyamira','Nairobi'
       ];
-
       const sectors = ['Roads', 'Health', 'Education', 'Water', 'Agriculture', 'ICT', 'Security', 'Infrastructure'];
       const seedData = [];
 
-      // Generate 2 high-profile contracts per county (94 total)
       counties.forEach((county, index) => {
         const sector = sectors[index % sectors.length];
         const year = 2023 + (index % 2);
         
-        // Contract 1: High Risk / Suspicious
         seedData.push([
           `KE-${county.substring(0,3).toUpperCase()}-${year}-001`,
           `Construction of ${sector.toLowerCase()} facilities in ${county} County Phase 1`,
           county, sector, Math.floor(Math.random() * 500000000) + 100000000,
           `${county} Builders Ltd`, '2022-01-01', 'single_source', `${year}-06-15`,
-          85, 'HIGH', '["Single-source award", "Company registered 3 months prior", "Director linked to official"]',
+          85, 'HIGH', '["Single-source award", "Company registered 3 months prior"]',
           `${county} County Government`, 'manual'
         ]);
 
-        // Contract 2: Low Risk / Clean
         seedData.push([
           `KE-${county.substring(0,3).toUpperCase()}-${year}-002`,
           `Supply of essential ${sector.toLowerCase()} equipment for ${county} region`,
           county, sector, Math.floor(Math.random() * 50000000) + 5000000,
           `National ${sector} Suppliers Co-op`, '2015-05-10', 'open', `${year}-08-20`,
-          15, 'LOW', '["Open competitive bidding", "Verified track record", "Within market benchmark"]',
+          15, 'LOW', '["Open competitive bidding", "Verified track record"]',
           `Ministry of ${sector}`, 'manual'
         ]);
       });
@@ -93,9 +89,12 @@ const initDB = async () => {
         VALUES ${vals} ON CONFLICT (contract_id) DO NOTHING`, flat);
       
       console.log(`✅ Seeded ${seedData.length} contracts across all 47 counties.`);
+    } else {
+      console.log('✅ Database already contains data.');
     }
   } catch (err) {
-    console.error('❌ DB Init Error:', err.message);
+    console.error('❌ DB Init Error (Full Details):', err);
+    throw err; // Re-throw so server.js knows it failed
   } finally {
     if (client) client.release();
   }
